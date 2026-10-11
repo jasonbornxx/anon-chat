@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' blob: data:; media-src 'self' blob: mediastream:; font-src 'self'; connect-src 'self' https://0.peerjs.com wss://0.peerjs.com; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'">
+<meta name="referrer" content="no-referrer">
+<meta name="robots" content="noindex, nofollow">
+<meta name="theme-color" content="#1f2339">
+<meta name="color-scheme" content="dark">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Anon Chat">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="format-detection" content="telephone=no">
+<title>Anon Chat</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div class="app" id="app">
+  <aside class="side">
+    <header class="me">
+      <div class="me-top">
+        <div class="me-label">Your permanent ID</div>
+        <button class="ghost icon" id="settingsBtn" aria-label="Settings and security"><svg class="i" data-icon="gear"></svg></button>
+      </div>
+      <div class="me-id" id="myId">…</div>
+      <div class="me-actions">
+        <button class="sm" id="copyId"><svg class="i" data-icon="copy"></svg>Copy ID</button>
+        <button class="sm" id="copyLink"><svg class="i" data-icon="link"></svg>Invite link</button>
+      </div>
+      <div class="net"><span class="dot" id="netDot"></span><span id="netText">Starting…</span></div>
+    </header>
+    <div class="connect">
+      <input type="text" id="peerInput" placeholder="Friend's ID, e.g. anon-abcd-efgh-ijkl" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" enterkeyhint="go" aria-label="Friend's ID">
+      <button class="primary" id="connectBtn">Connect</button>
+    </div>
+    <ul class="contacts" id="contacts"></ul>
+    <footer class="note">End-to-end encrypted. Your ID is tied to a key stored on this device.</footer>
+  </aside>
+
+  <main class="main" id="mainPane">
+    <div class="empty" id="empty">
+      <h1>Talk privately, no account needed.</h1>
+      <p>Your ID stays the same every time you open this app.</p>
+      <ol>
+        <li>Send your ID or invite link to a friend, or paste theirs on the left.</li>
+        <li>They accept your request once. After that you stay connected.</li>
+        <li>Message, share photos, videos and files, or start a voice or video call.</li>
+      </ol>
+    </div>
+
+    <section class="chat" id="chat" hidden>
+      <div class="chat-head">
+        <button class="back ghost icon" id="backBtn" aria-label="Back to chats"><svg class="i" data-icon="back"></svg></button>
+        <div class="avatar" id="headAvatar"></div>
+        <div class="who"><b id="headName"></b><span id="headStatus"></span></div>
+        <button class="icon" id="voiceBtn" aria-label="Voice call"><svg class="i" data-icon="phone"></svg></button>
+        <button class="icon" id="videoBtn" aria-label="Video call"><svg class="i" data-icon="video"></svg></button>
+        <button class="ghost icon" id="moreBtn" aria-label="More options"><svg class="i" data-icon="more"></svg></button>
+      </div>
+      <div class="msgs" id="msgs" aria-live="polite"></div>
+      <div class="composer">
+        <input type="file" id="fileInput" multiple hidden>
+        <button class="icon" id="attachBtn" aria-label="Share photos, videos or files"><svg class="i" data-icon="clip"></svg></button>
+        <textarea id="text" rows="1" placeholder="Write a message" aria-label="Message" enterkeyhint="send"></textarea>
+        <button class="primary icon" id="sendBtn" aria-label="Send"><svg class="i" data-icon="send"></svg></button>
+      </div>
+    </section>
+  </main>
+</div>
+
+<div id="dialogs"></div>
+
+<!-- Call screen -->
+<div id="call" hidden>
+  <video id="remote" autoplay playsinline></video>
+  <div class="call-info" id="callInfo">
+    <div class="avatar" id="callAvatar"></div>
+    <h2 id="callName"></h2>
+    <p id="callStatus"></p>
+    <div class="secure" id="callSecure" hidden><svg class="i" data-icon="shield"></svg><span id="callSecureText"></span></div>
+  </div>
+  <video id="local" autoplay playsinline muted></video>
+  <div class="call-bar">
+    <button id="muteBtn" aria-label="Mute microphone"><svg class="i" data-icon="mic"></svg></button>
+    <button id="camBtn" aria-label="Turn camera off"><svg class="i" data-icon="video"></svg></button>
+    <button id="flipBtn" aria-label="Switch camera"><svg class="i" data-icon="flip"></svg></button>
+    <button id="hangBtn" class="end" aria-label="End call"><svg class="i" data-icon="phone"></svg></button>
+  </div>
+</div>
+
+<!-- Settings sheet -->
+<div class="backdrop" id="settingsBack" hidden>
+  <div class="sheet" role="dialog" aria-label="Settings">
+    <div class="grabber"></div>
+    <h2>Account and security</h2>
+
+    <h3>Your ID</h3>
+    <div class="id-box" id="setId"></div>
+    <small class="muted-note" id="storageNote"></small>
+
+    <h3>Privacy</h3>
+    <label class="setting"><span class="grow">Save chat history on this device<small>Text only. Files are never saved.</small></span><input type="checkbox" class="switch" id="optHistory"></label>
+    <label class="setting"><span class="grow">Message notifications<small>Shows "New message" while the app is open in the background.</small></span><input type="checkbox" class="switch" id="optNotify"></label>
+
+    <h3>App lock</h3>
+    <div class="setting"><span class="grow"><span id="lockState">Off</span><small>A passcode encrypts your key and saved chats on this device.</small></span></div>
+    <div class="btn-row">
+      <button id="lockBtn">Set passcode</button>
+      <button id="lockRemove" hidden>Remove passcode</button>
+    </div>
+
+    <h3>Backup</h3>
+    <div class="setting"><span class="grow">Keep your ID if you lose this device or clear browser data.<small>The backup file is encrypted with a passphrase you choose.</small></span></div>
+    <div class="btn-row">
+      <button id="backupBtn">Export backup</button>
+      <button id="restoreBtn">Restore backup</button>
+    </div>
+    <input type="file" id="restoreFile" accept=".json,application/json" hidden>
+
+    <h3>Blocked</h3>
+    <div class="setting"><span class="grow" id="blockedInfo">No blocked IDs</span><button class="sm" id="unblockBtn" hidden>Unblock all</button></div>
+
+    <h3>Install</h3>
+    <div class="setting"><span class="grow"><span id="installNote">Add this app to your home screen for a full-screen app that opens instantly.</span></span><button class="sm primary" id="installBtn" hidden>Install</button></div>
+
+    <h3>Danger zone</h3>
+    <div class="btn-row"><button class="danger" id="eraseBtn">Erase my ID and all data</button></div>
+    <div class="btn-row"><button id="closeSettings">Done</button></div>
+  </div>
+</div>
+
+<!-- Chat options sheet -->
+<div class="backdrop" id="menuBack" hidden>
+  <div class="sheet menu" role="dialog" aria-label="Chat options">
+    <div class="grabber"></div>
+    <h2 id="menuTitle"></h2>
+    <button id="cmRename">Rename</button>
+    <button id="cmClear">Clear chat history</button>
+    <button id="cmRemove" class="danger-text">Remove contact</button>
+    <button id="cmBlock" class="danger-text">Block</button>
+    <button id="cmClose" class="ghost">Cancel</button>
+  </div>
+</div>
+
+<!-- Generic prompt / confirm -->
+<div class="modal" id="ask" hidden>
+  <div class="modal-card" role="alertdialog" aria-labelledby="askTitle">
+    <h2 id="askTitle"></h2>
+    <p id="askBody"></p>
+    <input type="password" id="askInput" autocomplete="off" autocapitalize="off" spellcheck="false">
+    <div class="row">
+      <button id="askCancel">Cancel</button>
+      <button id="askOk" class="primary">OK</button>
+    </div>
+  </div>
+</div>
+
+<!-- Lock screen -->
+<div id="lock" hidden>
+  <form class="modal-card" id="lockForm" autocomplete="off">
+    <div class="big"><svg class="i" data-icon="lock"></svg></div>
+    <h2>Unlock Anon Chat</h2>
+    <p>Enter your passcode.</p>
+    <input type="password" id="lockInput" autocomplete="off" autocapitalize="off" spellcheck="false" aria-label="Passcode">
+    <div class="err" id="lockMsg" role="alert"></div>
+    <div class="row"><button type="submit" class="primary" id="lockGo">Unlock</button></div>
+  </form>
+</div>
+
+<div id="toasts"></div>
+
+<script src="vendor/peerjs.min.js"></script>
+<script type="module" src="app.js"></script>
+</body>
+</html>
